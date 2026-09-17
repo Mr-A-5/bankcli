@@ -1,0 +1,9 @@
+.prettierrc
+CLAUDE.md
+P0-Instructions.md
+package-lock.json
+package.json
+Test.sql
+TODO.md
+node_modules
+.vscode
