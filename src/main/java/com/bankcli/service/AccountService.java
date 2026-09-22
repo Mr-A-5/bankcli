@@ -10,6 +10,5 @@ public interface AccountService {
 	void createAccount(String pin);
 	void makeTransfer(int toAccountId, double amount);
 	void logOut();
-	void getAllLogs();
 	void getTransactions();
 }

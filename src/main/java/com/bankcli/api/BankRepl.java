@@ -45,7 +45,6 @@ public class BankRepl {
 			case "log-out" -> service.logOut();
 			case "status" -> service.getAccountStatus();
 			case "transactions" -> service.getTransactions();
-			case "logs" -> service.getAllLogs();
 			case "help" -> printHelp();
 			default -> System.out.println("Unknown command");
 		}

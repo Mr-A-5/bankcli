@@ -1,70 +1,61 @@
 package com.bankcli.service;
 
 import com.bankcli.domain.Account;
-import com.bankcli.domain.Log;
 import com.bankcli.domain.Transaction;
 import com.bankcli.persistence.BankDAO;
-import com.bankcli.persistence.LogDAO;
-import java.sql.Timestamp;
-import java.time.Instant;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AccountServiceImpl implements AccountService {
 
+	private static final Logger logger = LoggerFactory.getLogger(AccountServiceImpl.class);
+
 	private final BankDAO bankDAO;
-	private final LogDAO logDAO;
 	private Account account;
 
-	public AccountServiceImpl(BankDAO bankDAO, LogDAO logDAO) {
+	public AccountServiceImpl(BankDAO bankDAO) {
 		this.bankDAO = bankDAO;
-		this.logDAO = logDAO;
 	}
 
 	@Override
 	public void makeDeposit(double amount) {
 		if (!loggedIn()) {
-			logMessage(
-				"A User has attempted to make a deposit without login in first. Deposit Amount: $" + amount,
-				"ERROR"
-			);
+			logger.error("A User has attempted to make a deposit without login in first. Deposit Amount: ${}", amount);
 			return;
 		} else if (amount <= 0) {
 			System.out.println("Deposit amounts can only be positive integers");
-			logMessage(
-				"Account Id: " +
-					account.getId() +
-					" attempted to deposit a negative amount. Deposit Amount: $" +
-					amount,
-				"ERROR"
+			logger.error(
+				"Account Id: {} attempted to deposit a negative amount. Deposit Amount: ${}",
+				account.getId(),
+				amount
 			);
 		} else {
 			bankDAO.processTransaction(account, amount, null, "DEPOSIT");
 			account.setBalance(account.getBalance() + amount);
-			logMessage("Account - " + account.getId() + " has deposited an amount of $" + amount, "INFO");
+			logger.info("Account - {} has deposited an amount of ${}", account.getId(), amount);
 		}
 	}
 
 	@Override
 	public void makeWithdrawal(double amount) {
 		if (!loggedIn()) {
-			logMessage(
-				"A User has attempted to make a withdraw without login in first. Withdraw Amount: $" + amount,
-				"ERROR"
+			logger.error(
+				"A User has attempted to make a withdraw without login in first. Withdraw Amount: ${}",
+				amount
 			);
 			return;
 		} else if (amount <= 0) {
 			System.out.println("Withdraw amounts can only be positive integers");
-			logMessage(
-				"Account Id: " +
-					account.getId() +
-					" attempted to withdraw a negative amount. Withdraw Amount: " +
-					amount,
-				"ERROR"
+			logger.error(
+				"Account Id: {} attempted to withdraw a negative amount. Withdraw Amount: {}",
+				account.getId(),
+				amount
 			);
 		} else if (!overdraft(account, amount)) {
 			bankDAO.processTransaction(account, amount, null, "WITHDRAW");
 			account.setBalance(account.getBalance() - amount);
-			logMessage("Account Id " + account.getId() + " has withdrawn an amount of $" + amount, "INFO");
+			logger.info("Account Id {} has withdrawn an amount of ${}", account.getId(), amount);
 		}
 	}
 
@@ -76,10 +67,10 @@ public class AccountServiceImpl implements AccountService {
 	public void createAccount(String pin) {
 		if (pin.length() < 4 || !pin.matches("[0-9]*")) {
 			System.out.println("Please ensure your pin is only numbers and at least for 4 characters long");
-			logMessage("User attempted to create an account with an invalid PIN. PIN: " + pin, "ERROR");
+			logger.error("User attempted to create an account with an invalid PIN (length={})", pin.length());
 		} else {
 			this.account = bankDAO.createAccount(pin);
-			logMessage("User has created an account with valid credentials. Account Id: " + account.getId(), "INFO");
+			logger.info("User has created an account with valid credentials. Account Id: {}", account.getId());
 			System.out.print("Welcome to bank CLI: \n " + this.account.toString());
 		}
 	}
@@ -87,23 +78,21 @@ public class AccountServiceImpl implements AccountService {
 	@Override
 	public void makeTransfer(int toAccountId, double amount) {
 		if (!loggedIn()) {
-			logMessage(
-				"A User has attempted to make a transfer without login in first. Transfer Amount:" + amount,
-				"ERROR"
+			logger.error(
+				"A User has attempted to make a transfer without login in first. Transfer Amount: {}",
+				amount
 			);
 			return;
 		} else if (amount <= 0) {
 			System.out.println("Transfer amounts can only be positive integers");
-			logMessage(
-				"Account Id: " +
-					account.getId() +
-					" attempted to transfer an invalid amount. Transfer Amount " +
-					amount,
-				"ERROR"
+			logger.error(
+				"Account Id: {} attempted to transfer an invalid amount. Transfer Amount {}",
+				account.getId(),
+				amount
 			);
 		} else if (account.getId() == toAccountId) {
 			System.out.println("You cannot transfer money to the same account.");
-			logMessage("Account Id: " + account.getId() + " attempted to transfer to its own account", "ERROR");
+			logger.error("Account Id: {} attempted to transfer to its own account", account.getId());
 		} else if (!overdraft(account, amount)) {
 			Double balance = bankDAO.getAccountBalanceByID(toAccountId);
 			if (balance == null) {
@@ -112,13 +101,8 @@ public class AccountServiceImpl implements AccountService {
 			Account toAccount = new Account(toAccountId, balance);
 			bankDAO.processTransaction(account, amount, toAccount, "TRANSFER");
 			account.setBalance(account.getBalance() - amount);
-			logMessage("Account Id " + account.getId() + " transferred $" + amount + " to " + toAccountId, "INFO");
+			logger.info("Account Id {} transferred ${} to {}", account.getId(), amount, toAccountId);
 		}
-	}
-
-	private void logMessage(String message, String type) {
-		Log l = new Log(Timestamp.from(Instant.now()).toString(), type, message);
-		logDAO.writeLog(l);
 	}
 
 	@Override
@@ -126,16 +110,10 @@ public class AccountServiceImpl implements AccountService {
 		Account acc = bankDAO.getAccountByLogIn(account);
 		if (acc == null) {
 			System.out.println("Log in does not have a match in the system. Please try again.");
-			logMessage(
-				"A user has attempt to log in using invalid credentials. Account Id: " +
-					account.getId() +
-					" PIN: " +
-					account.getPin(),
-				"ERROR"
-			);
+			logger.error("A user has attempt to log in using invalid credentials. Account Id: {}", account.getId());
 		} else {
 			this.account = acc;
-			logMessage("User successfully logged into their account with account id: " + account.getId(), "INFO");
+			logger.info("User successfully logged into their account with account id: {}", account.getId());
 			System.out.println(this.account.toString());
 		}
 	}
@@ -145,14 +123,11 @@ public class AccountServiceImpl implements AccountService {
 			System.out.println(
 				"Transaction will lead to overdraft and cannot proceed. Please try again with a different amount."
 			);
-			logMessage(
-				"Account Id " +
-					account.getId() +
-					" attempted an overdraft. Balance: " +
-					account.getBalance() +
-					" - Amount: " +
-					amount,
-				"ERROR"
+			logger.error(
+				"Account Id {} attempted an overdraft. Balance: {} - Amount: {}",
+				account.getId(),
+				account.getBalance(),
+				amount
 			);
 			return true;
 		}
@@ -172,7 +147,7 @@ public class AccountServiceImpl implements AccountService {
 	@Override
 	public void logOut() {
 		if (loggedIn()) {
-			logMessage("Account Id " + account.getId() + " logged out from their account", "INFO");
+			logger.info("Account Id {} logged out from their account", account.getId());
 			account = null;
 		}
 	}
@@ -180,10 +155,10 @@ public class AccountServiceImpl implements AccountService {
 	@Override
 	public void getAccountStatus() {
 		if (!loggedIn()) {
-			logMessage("A user attempted to get their account status without login in first", "ERROR");
+			logger.error("A user attempted to get their account status without login in first");
 			return;
 		} else {
-			logMessage("Account Id: " + account.getId() + " checked their account status", "INFO");
+			logger.info("Account Id: {} checked their account status", account.getId());
 			System.out.println(account.toString());
 		}
 	}
@@ -191,7 +166,7 @@ public class AccountServiceImpl implements AccountService {
 	@Override
 	public void getTransactions() {
 		if (!loggedIn()) {
-			logMessage("A user attempted to get their account transaction without login in first", "ERROR");
+			logger.error("A user attempted to get their account transaction without login in first");
 			return;
 		} else {
 			List<Transaction> txs = bankDAO.getAllTransactionsByAccountId(account);
@@ -207,17 +182,7 @@ public class AccountServiceImpl implements AccountService {
 			for (Transaction tx : txs) {
 				System.out.println(tx);
 			}
-			logMessage("Account Id: " + account.getId() + "checked all their transactions", "INFO");
-		}
-	}
-
-	@Override
-	public void getAllLogs() {
-		List<Log> logs = logDAO.getAllLogs();
-		logs = logs.reversed();
-		System.out.printf("| %-30s | %-7s | %-90s |%n", "Timestamp", "Type", "Message");
-		for (Log log : logs) {
-			System.out.println(log);
+			logger.info("Account Id: {} checked all their transactions", account.getId());
 		}
 	}
 }

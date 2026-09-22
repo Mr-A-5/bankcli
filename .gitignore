@@ -7,3 +7,6 @@ Test.sql
 TODO.md
 node_modules
 .vscode
+bank.log
+bank.*.log
+log.txt
