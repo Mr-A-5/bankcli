@@ -2,6 +2,7 @@ package com.bankcli.persistence;
 
 import com.bankcli.domain.Account;
 import com.bankcli.domain.Transaction;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -49,26 +50,26 @@ public class BankDAOImpl implements BankDAO {
 	}
 
 	@Override
-	public void processTransaction(Account account, double amount, Account toAccount, String type) {
-		if (amount < 0) {
+	public void processTransaction(Account account, BigDecimal amount, Account toAccount, String type) {
+		if (amount.signum() < 0) {
 			throw new IllegalArgumentException("Transaction amount must be positive");
 		}
 
 		if (type.equals("DEPOSIT") || type.equals("WITHDRAW")) {
 			try (Connection connection = ConnectionFactory.getConnectionFactory().getConnection()) {
 				connection.setAutoCommit(false);
-				double newBalance;
+				BigDecimal newBalance;
 				if (type.equals("DEPOSIT")) {
-					newBalance = account.getBalance() + amount;
+					newBalance = account.getBalance().add(amount);
 				} else {
-					newBalance = account.getBalance() - amount;
+					newBalance = account.getBalance().subtract(amount);
 				}
 
 				try (
 					PreparedStatement updateBalance = connection.prepareStatement(UPDATE_BALANCE_OF_ACCOUNT);
 					PreparedStatement insertTransaction = connection.prepareStatement(INSERT_DEPOSIT_TRANSACTION)
 				) {
-					updateBalance.setDouble(1, newBalance);
+					updateBalance.setBigDecimal(1, newBalance);
 					updateBalance.setInt(2, account.getId());
 
 					if (updateBalance.executeUpdate() != 1) {
@@ -77,7 +78,7 @@ public class BankDAOImpl implements BankDAO {
 
 					insertTransaction.setInt(1, account.getId());
 					insertTransaction.setString(2, type);
-					insertTransaction.setDouble(3, amount);
+					insertTransaction.setBigDecimal(3, amount);
 					insertTransaction.setNull(4, Types.INTEGER);
 					insertTransaction.setTimestamp(5, Timestamp.from(Instant.now()));
 					if (insertTransaction.executeUpdate() != 1) {
@@ -95,8 +96,8 @@ public class BankDAOImpl implements BankDAO {
 		} else if (type.equals("TRANSFER")) {
 			try (Connection connection = ConnectionFactory.getConnectionFactory().getConnection()) {
 				connection.setAutoCommit(false);
-				double fromAccNewBalance = account.getBalance() - amount;
-				double toAccNewBalance = toAccount.getBalance() + amount;
+				BigDecimal fromAccNewBalance = account.getBalance().subtract(amount);
+				BigDecimal toAccNewBalance = toAccount.getBalance().add(amount);
 				try (
 					PreparedStatement updateBalanceFromAcc = connection.prepareStatement(UPDATE_BALANCE_OF_ACCOUNT);
 					PreparedStatement updateBalanceToAcc = connection.prepareStatement(UPDATE_BALANCE_OF_ACCOUNT);
@@ -105,13 +106,13 @@ public class BankDAOImpl implements BankDAO {
 					);
 					PreparedStatement insertTransactionToAcc = connection.prepareStatement(INSERT_DEPOSIT_TRANSACTION)
 				) {
-					updateBalanceFromAcc.setDouble(1, fromAccNewBalance);
+					updateBalanceFromAcc.setBigDecimal(1, fromAccNewBalance);
 					updateBalanceFromAcc.setInt(2, account.getId());
 					if (updateBalanceFromAcc.executeUpdate() != 1) {
 						throw new SQLException("Account not found or PIN incorrect");
 					}
 
-					updateBalanceToAcc.setDouble(1, toAccNewBalance);
+					updateBalanceToAcc.setBigDecimal(1, toAccNewBalance);
 					updateBalanceToAcc.setInt(2, toAccount.getId());
 					if (updateBalanceToAcc.executeUpdate() != 1) {
 						throw new SQLException("Account not found or PIN incorrect");
@@ -119,7 +120,7 @@ public class BankDAOImpl implements BankDAO {
 
 					insertTransactionFromAcc.setInt(1, account.getId());
 					insertTransactionFromAcc.setString(2, type);
-					insertTransactionFromAcc.setDouble(3, amount);
+					insertTransactionFromAcc.setBigDecimal(3, amount);
 					insertTransactionFromAcc.setInt(4, toAccount.getId());
 					insertTransactionFromAcc.setTimestamp(5, Timestamp.from(Instant.now()));
 					if (insertTransactionFromAcc.executeUpdate() != 1) {
@@ -128,7 +129,7 @@ public class BankDAOImpl implements BankDAO {
 
 					insertTransactionToAcc.setInt(1, toAccount.getId());
 					insertTransactionToAcc.setString(2, type);
-					insertTransactionToAcc.setDouble(3, amount);
+					insertTransactionToAcc.setBigDecimal(3, amount);
 					insertTransactionToAcc.setInt(4, account.getId());
 					insertTransactionToAcc.setTimestamp(5, Timestamp.from(Instant.now()));
 					if (insertTransactionToAcc.executeUpdate() != 1) {
@@ -191,7 +192,7 @@ public class BankDAOImpl implements BankDAO {
 			statement.setString(2, String.valueOf(account.getPin()));
 			try (ResultSet resultSet = statement.executeQuery()) {
 				if (resultSet.next()) {
-					account.setBalance(resultSet.getDouble("balance"));
+					account.setBalance(resultSet.getBigDecimal("balance"));
 					return account;
 				}
 			}
@@ -202,7 +203,7 @@ public class BankDAOImpl implements BankDAO {
 	}
 
 	@Override
-	public Double getAccountBalanceByID(int id) {
+	public BigDecimal getAccountBalanceByID(int id) {
 		try (
 			Connection connection = ConnectionFactory.getConnectionFactory().getConnection();
 			PreparedStatement statement = connection.prepareStatement(FIND_ACCOUNT_BY_ID)
@@ -210,7 +211,7 @@ public class BankDAOImpl implements BankDAO {
 			statement.setInt(1, id);
 			try (ResultSet resultSet = statement.executeQuery()) {
 				if (resultSet.next()) {
-					return resultSet.getDouble("balance");
+					return resultSet.getBigDecimal("balance");
 				}
 			}
 			return null;
@@ -238,12 +239,14 @@ public class BankDAOImpl implements BankDAO {
 	}
 
 	private Transaction mapTransactions(ResultSet resultSet) throws SQLException {
+		int relatedAccountId = resultSet.getInt("related_account_id");
+		Integer toAccount = resultSet.wasNull() ? null : relatedAccountId;
 		return new Transaction(
 			resultSet.getInt("transaction_id"),
-			resultSet.getDouble("amount"),
+			resultSet.getBigDecimal("amount"),
 			resultSet.getTimestamp("timestamp"),
-			resultSet.getInt("related_account_id"),
 			resultSet.getInt("account_id"),
+			toAccount,
 			resultSet.getString("type")
 		);
 	}

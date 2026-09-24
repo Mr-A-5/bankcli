@@ -1,5 +1,6 @@
 package com.bankcli.domain;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -7,17 +8,17 @@ public class Account {
 
 	private int id;
 	private String pin;
-	private double balance;
+	private BigDecimal balance;
 	private List<Transaction> sessionTransactions;
 
 	public Account(int id, String pin) {
 		this.id = id;
 		this.pin = pin;
-		this.balance = 0;
+		this.balance = BigDecimal.ZERO;
 		this.sessionTransactions = new ArrayList<>();
 	}
 
-	public Account(int id, double balance) {
+	public Account(int id, BigDecimal balance) {
 		this.id = id;
 		this.balance = balance;
 	}
@@ -30,7 +31,7 @@ public class Account {
 		return pin;
 	}
 
-	public double getBalance() {
+	public BigDecimal getBalance() {
 		return balance;
 	}
 
@@ -42,7 +43,7 @@ public class Account {
 		this.pin = pin;
 	}
 
-	public void setBalance(double balance) {
+	public void setBalance(BigDecimal balance) {
 		this.balance = balance;
 	}
 

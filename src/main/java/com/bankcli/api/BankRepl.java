@@ -2,6 +2,7 @@ package com.bankcli.api;
 
 import com.bankcli.domain.Account;
 import com.bankcli.service.AccountService;
+import java.math.BigDecimal;
 import java.util.Scanner;
 
 public class BankRepl {
@@ -15,7 +16,7 @@ public class BankRepl {
 
 	public void run() {
 		while (true) {
-			System.out.print("Please input a command(help for command list): \n> ");
+			System.out.print("Please enter a command (type help for the list of commands): \n> ");
 			String command = scanner.nextLine().trim();
 
 			if (command.equals("exit")) {
@@ -32,32 +33,25 @@ public class BankRepl {
 
 	private void handle(String command) {
 		switch (command) {
-			case "create" -> service.createAccount(readString("Please input a pin to create your account: \n> "));
-			case "log-in" -> service.getAccount(readAccount());
-			case "deposit" -> service.makeDeposit(readDouble("Please input the amount you want to deposit. \n> $"));
-			case "withdraw" -> service.makeWithdrawal(
-				readDouble("Please input the amount you want to withdraw. \n> $")
+			case "1" -> service.getAccount(readAccount());
+			case "2" -> service.createAccount(readString("Please enter a PIN to create your account: \n> "));
+			case "3" -> service.makeDeposit(readAmount("Please enter the amount you want to deposit: \n> $"));
+			case "4" -> service.makeWithdrawal(readAmount("Please enter the amount you want to withdraw: \n> $"));
+			case "5" -> service.makeTransfer(
+				readInt("Please enter the Account ID of the account you wish to transfer to: \n> "),
+				readAmount("Please enter the amount you want to transfer: \n> $")
 			);
-			case "transfer" -> service.makeTransfer(
-				readInt("Please input the account id of the account you which to transfer to. \n> "),
-				readDouble("Please input the amount that you want to transfer. \n> $")
-			);
-			case "log-out" -> service.logOut();
-			case "status" -> service.getAccountStatus();
-			case "transactions" -> service.getTransactions();
+			case "6" -> service.getAccountStatus();
+			case "7" -> service.getTransactions();
+			case "8" -> service.logOut();
 			case "help" -> printHelp();
-			default -> System.out.println("Unknown command");
+			default -> System.out.println("Unknown command. Type help to see the list of commands.");
 		}
 	}
 
-	/**
-	 * This method reads a username and pin from the standard input
-	 *
-	 * @return the account object created from the username and pin
-	 */
 	private Account readAccount() {
-		int id = readInt("Please input your user name: \n> ");
-		String pin = readString("Please input your pin: \n> ");
+		int id = readInt("Please enter your Account ID: \n> ");
+		String pin = readString("Please enter your PIN: \n> ");
 		Account acc = new Account(id, pin);
 		return acc;
 	}
@@ -73,20 +67,26 @@ public class BankRepl {
 		return Integer.parseInt(scanner.nextLine().trim());
 	}
 
-	private double readDouble(String prompt) {
+	private BigDecimal readAmount(String prompt) {
 		System.out.print(prompt);
-		return Double.parseDouble(scanner.nextLine().trim());
+		try {
+			return new BigDecimal(scanner.nextLine().trim());
+		} catch (NumberFormatException e) {
+			throw new IllegalArgumentException("Please enter a valid amount (e.g. 12.34).");
+		}
 	}
 
 	private void printHelp() {
-		System.out.println("Available commands:");
-		System.out.println("balance - To get the balance of the account");
-		System.out.println("log - To log in into an account using their id and pin");
-		System.out.println("create - To create an account in the bank");
-		System.out.println("transfer - To transfer to another account");
-		System.out.println("withdraw - Withdraw money from the account");
-		System.out.println("deposit - Deposit money into the account");
+		System.out.println("\nAvailable commands:");
+		System.out.println("1 - Log in to an account using your Account ID and PIN");
+		System.out.println("2 - Create a new account");
+		System.out.println("3 - Deposit money into your account");
+		System.out.println("4 - Withdraw money from your account");
+		System.out.println("5 - Transfer money to another account");
+		System.out.println("6 - View your account status");
+		System.out.println("7 - View your transaction history");
+		System.out.println("8 - Log out of your account");
 		System.out.println("help - Show this help message");
-		System.out.println("exit - Exit the application");
+		System.out.println("exit - Exit the application\n");
 	}
 }

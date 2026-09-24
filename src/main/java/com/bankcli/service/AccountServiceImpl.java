@@ -3,6 +3,7 @@ package com.bankcli.service;
 import com.bankcli.domain.Account;
 import com.bankcli.domain.Transaction;
 import com.bankcli.persistence.BankDAO;
+import java.math.BigDecimal;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,42 +20,48 @@ public class AccountServiceImpl implements AccountService {
 	}
 
 	@Override
-	public void makeDeposit(double amount) {
+	public void makeDeposit(BigDecimal amount) {
 		if (!loggedIn()) {
 			logger.error("A User has attempted to make a deposit without login in first. Deposit Amount: ${}", amount);
 			return;
-		} else if (amount <= 0) {
+		} else if (amount.signum() <= 0) {
 			System.out.println("Deposit amounts can only be positive integers");
 			logger.error(
 				"Account Id: {} attempted to deposit a negative amount. Deposit Amount: ${}",
 				account.getId(),
 				amount
 			);
+		} else if (hasTooManyDecimals(amount)) {
+			return;
 		} else {
 			bankDAO.processTransaction(account, amount, null, "DEPOSIT");
-			account.setBalance(account.getBalance() + amount);
+			account.setBalance(account.getBalance().add(amount));
+			System.out.println(account.toString());
 			logger.info("Account - {} has deposited an amount of ${}", account.getId(), amount);
 		}
 	}
 
 	@Override
-	public void makeWithdrawal(double amount) {
+	public void makeWithdrawal(BigDecimal amount) {
 		if (!loggedIn()) {
 			logger.error(
 				"A User has attempted to make a withdraw without login in first. Withdraw Amount: ${}",
 				amount
 			);
 			return;
-		} else if (amount <= 0) {
+		} else if (amount.signum() <= 0) {
 			System.out.println("Withdraw amounts can only be positive integers");
 			logger.error(
 				"Account Id: {} attempted to withdraw a negative amount. Withdraw Amount: {}",
 				account.getId(),
 				amount
 			);
+		} else if (hasTooManyDecimals(amount)) {
+			return;
 		} else if (!overdraft(account, amount)) {
 			bankDAO.processTransaction(account, amount, null, "WITHDRAW");
-			account.setBalance(account.getBalance() - amount);
+			account.setBalance(account.getBalance().subtract(amount));
+			System.out.println(account.toString());
 			logger.info("Account Id {} has withdrawn an amount of ${}", account.getId(), amount);
 		}
 	}
@@ -76,14 +83,11 @@ public class AccountServiceImpl implements AccountService {
 	}
 
 	@Override
-	public void makeTransfer(int toAccountId, double amount) {
+	public void makeTransfer(int toAccountId, BigDecimal amount) {
 		if (!loggedIn()) {
-			logger.error(
-				"A User has attempted to make a transfer without login in first. Transfer Amount: {}",
-				amount
-			);
+			logger.error("A User has attempted to make a transfer without login in first. Transfer Amount: {}", amount);
 			return;
-		} else if (amount <= 0) {
+		} else if (amount.signum() <= 0) {
 			System.out.println("Transfer amounts can only be positive integers");
 			logger.error(
 				"Account Id: {} attempted to transfer an invalid amount. Transfer Amount {}",
@@ -93,14 +97,17 @@ public class AccountServiceImpl implements AccountService {
 		} else if (account.getId() == toAccountId) {
 			System.out.println("You cannot transfer money to the same account.");
 			logger.error("Account Id: {} attempted to transfer to its own account", account.getId());
+		} else if (hasTooManyDecimals(amount)) {
+			return;
 		} else if (!overdraft(account, amount)) {
-			Double balance = bankDAO.getAccountBalanceByID(toAccountId);
+			BigDecimal balance = bankDAO.getAccountBalanceByID(toAccountId);
 			if (balance == null) {
-				System.out.println("Receiving account does not exists.");
+				System.out.println("Receiving account does not exist.");
+				return;
 			}
 			Account toAccount = new Account(toAccountId, balance);
 			bankDAO.processTransaction(account, amount, toAccount, "TRANSFER");
-			account.setBalance(account.getBalance() - amount);
+			account.setBalance(account.getBalance().subtract(amount));
 			logger.info("Account Id {} transferred ${} to {}", account.getId(), amount, toAccountId);
 		}
 	}
@@ -118,8 +125,21 @@ public class AccountServiceImpl implements AccountService {
 		}
 	}
 
-	private boolean overdraft(Account account, double amount) {
-		if (account.getBalance() - amount < 0) {
+	private boolean hasTooManyDecimals(BigDecimal amount) {
+		if (amount.stripTrailingZeros().scale() > 2) {
+			System.out.println("Amounts can have at most 2 decimal places (e.g. $12.34). Please try again.");
+			logger.error(
+				"Account Id: {} entered an amount with more than 2 decimal places. Amount: {}",
+				account.getId(),
+				amount
+			);
+			return true;
+		}
+		return false;
+	}
+
+	private boolean overdraft(Account account, BigDecimal amount) {
+		if (account.getBalance().subtract(amount).signum() < 0) {
 			System.out.println(
 				"Transaction will lead to overdraft and cannot proceed. Please try again with a different amount."
 			);

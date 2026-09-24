@@ -1,17 +1,18 @@
 package com.bankcli.domain;
 
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 
 public class Transaction {
 
 	private int id;
-	private double amount;
+	private BigDecimal amount;
 	private Timestamp timestamp;
 	private int fromAccount;
 	private Integer toAccount;
 	private String type;
 
-	public Transaction(int id, double amount, Timestamp timestamp, int fromAccount, int toAccount, String type) {
+	public Transaction(int id, BigDecimal amount, Timestamp timestamp, int fromAccount, Integer toAccount, String type) {
 		this.id = id;
 		this.amount = amount;
 		this.timestamp = timestamp;
@@ -20,11 +21,11 @@ public class Transaction {
 		this.type = type;
 	}
 
-	public double getAmount() {
+	public BigDecimal getAmount() {
 		return amount;
 	}
 
-	public void setAmount(double amount) {
+	public void setAmount(BigDecimal amount) {
 		this.amount = amount;
 	}
 
@@ -60,24 +61,24 @@ public class Transaction {
 		this.fromAccount = fromAccount;
 	}
 
-	public int getToAccount() {
+	public Integer getToAccount() {
 		return toAccount;
 	}
 
-	public void setToAccount(int toAccount) {
+	public void setToAccount(Integer toAccount) {
 		this.toAccount = toAccount;
 	}
 
 	@Override
 	public String toString() {
 		return String.format(
-			"| %-30s | %-20d | %-20s | %-20d | $%-19.2f | %-20d |",
+			"| %-30s | %-20d | %-20s | %-20d | $%-19.2f | %-20s |",
 			getTimestamp().toString(),
 			getId(),
 			getType(),
 			getFromAccount(),
 			getAmount(),
-			getToAccount()
+			getToAccount() == null ? "-" : getToAccount()
 		);
 	}
 }
