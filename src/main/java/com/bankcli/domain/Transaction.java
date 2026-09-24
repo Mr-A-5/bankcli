@@ -72,12 +72,12 @@ public class Transaction {
 	@Override
 	public String toString() {
 		return String.format(
-			"| %-30s | %-20d | %-20s | %-20d | $%-19.2f | %-20s |",
+			"| %-30s | %-20d | %-20s | %-20d | %-20s | %-20s |",
 			getTimestamp().toString(),
 			getId(),
 			getType(),
 			getFromAccount(),
-			getAmount(),
+			(getAmount().signum() < 0 ? "-$" : "$") + String.format("%.2f", getAmount().abs()),
 			getToAccount() == null ? "-" : getToAccount()
 		);
 	}

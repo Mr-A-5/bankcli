@@ -1,6 +1,7 @@
 package com.bankcli.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -49,7 +50,7 @@ class AccountServiceImplTest {
 		accountService.makeDeposit(new BigDecimal("100"));
 
 		assertAmount("100", account.getBalance());
-		verify(bankDAO).processTransaction(eq(account), eq(new BigDecimal("100")), eq(null), eq("DEPOSIT"));
+		verify(bankDAO).processTransaction(eq(account), eq(new BigDecimal("100.00")), eq(null), eq("DEPOSIT"));
 	}
 
 	@Test
@@ -66,19 +67,10 @@ class AccountServiceImplTest {
 	void makeDeposit_rejectsMoreThanTwoDecimalPlaces() {
 		Account account = logInWithBalance("0");
 
-		accountService.makeDeposit(new BigDecimal("10.555"));
+		assertThrows(IllegalArgumentException.class, () -> accountService.makeDeposit(new BigDecimal("10.555")));
 
 		assertAmount("0", account.getBalance());
 		verify(bankDAO, never()).processTransaction(any(), any(), any(), any());
-	}
-
-	@Test
-	void makeDeposit_ignoresTrailingZerosBeyondTwoDecimalPlaces() {
-		Account account = logInWithBalance("0");
-
-		accountService.makeDeposit(new BigDecimal("10.500"));
-
-		assertAmount("10.5", account.getBalance());
 	}
 
 	@Test
@@ -88,14 +80,14 @@ class AccountServiceImplTest {
 		accountService.makeWithdrawal(new BigDecimal("40"));
 
 		assertAmount("60", account.getBalance());
-		verify(bankDAO).processTransaction(eq(account), eq(new BigDecimal("40")), eq(null), eq("WITHDRAW"));
+		verify(bankDAO).processTransaction(eq(account), eq(new BigDecimal("40.00")), eq(null), eq("WITHDRAW"));
 	}
 
 	@Test
 	void makeWithdrawal_rejectsMoreThanTwoDecimalPlaces() {
 		Account account = logInWithBalance("100.00");
 
-		accountService.makeWithdrawal(new BigDecimal("40.001"));
+		assertThrows(IllegalArgumentException.class, () -> accountService.makeWithdrawal(new BigDecimal("40.001")));
 
 		assertAmount("100", account.getBalance());
 		verify(bankDAO, never()).processTransaction(any(), any(), any(), any());
@@ -109,14 +101,19 @@ class AccountServiceImplTest {
 		accountService.makeTransfer(2, new BigDecimal("25.25"));
 
 		assertAmount("74.75", account.getBalance());
-		verify(bankDAO).processTransaction(eq(account), eq(new BigDecimal("25.25")), any(Account.class), eq("TRANSFER"));
+		verify(bankDAO).processTransaction(
+			eq(account),
+			eq(new BigDecimal("25.25")),
+			any(Account.class),
+			eq("TRANSFER")
+		);
 	}
 
 	@Test
 	void makeTransfer_rejectsMoreThanTwoDecimalPlaces() {
 		Account account = logInWithBalance("100.00");
 
-		accountService.makeTransfer(2, new BigDecimal("25.255"));
+		assertThrows(IllegalArgumentException.class, () -> accountService.makeTransfer(2, new BigDecimal("25.255")));
 
 		assertAmount("100", account.getBalance());
 		verify(bankDAO, never()).processTransaction(any(), any(), any(), any());

@@ -1,8 +1,10 @@
 package com.bankcli.api;
 
 import com.bankcli.domain.Account;
+import com.bankcli.domain.Transaction;
 import com.bankcli.service.AccountService;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Scanner;
 
 public class BankRepl {
@@ -15,6 +17,7 @@ public class BankRepl {
 	}
 
 	public void run() {
+		System.out.println("Welcome to BANK CLI");
 		while (true) {
 			System.out.print("Please enter a command (type help for the list of commands): \n> ");
 			String command = scanner.nextLine().trim();
@@ -27,25 +30,56 @@ public class BankRepl {
 				handle(command);
 			} catch (IllegalArgumentException e) {
 				System.out.println("Error: " + e.getMessage());
+			} catch (IllegalStateException e) {
+				System.out.println("Error: Something went wrong on our end. Please try again later.");
 			}
 		}
 	}
 
 	private void handle(String command) {
 		switch (command) {
-			case "1" -> service.getAccount(readAccount());
-			case "2" -> service.createAccount(readString("Please enter a PIN to create your account: \n> "));
-			case "3" -> service.makeDeposit(readAmount("Please enter the amount you want to deposit: \n> $"));
-			case "4" -> service.makeWithdrawal(readAmount("Please enter the amount you want to withdraw: \n> $"));
-			case "5" -> service.makeTransfer(
-				readInt("Please enter the Account ID of the account you wish to transfer to: \n> "),
-				readAmount("Please enter the amount you want to transfer: \n> $")
+			case "1" -> printAccount(service.getAccount(readAccount()));
+			case "2" -> {
+				Account created = service.createAccount(readString("Please enter a PIN to create your account: \n> "));
+				System.out.println("Welcome to bank CLI:");
+				printAccount(created);
+			}
+			case "3" -> printAccount(
+				service.makeDeposit(readAmount("Please enter the amount you want to deposit: \n> $"))
 			);
-			case "6" -> service.getAccountStatus();
-			case "7" -> service.getTransactions();
+			case "4" -> printAccount(
+				service.makeWithdrawal(readAmount("Please enter the amount you want to withdraw: \n> $"))
+			);
+			case "5" -> printAccount(
+				service.makeTransfer(
+					readInt("Please enter the Account ID of the account you wish to transfer to: \n> "),
+					readAmount("Please enter the amount you want to transfer: \n> $")
+				)
+			);
+			case "6" -> printAccount(service.getAccountStatus());
+			case "7" -> printTransactions(service.getTransactions());
 			case "8" -> service.logOut();
 			case "help" -> printHelp();
 			default -> System.out.println("Unknown command. Type help to see the list of commands.");
+		}
+	}
+
+	private void printAccount(Account account) {
+		System.out.println(account);
+	}
+
+	private void printTransactions(List<Transaction> txs) {
+		System.out.printf(
+			"| %-30s | %-20s | %-20s | %-20s | %-20s | %-20s |%n",
+			"TimeStamp",
+			"Transaction Id",
+			"Type of Transaction",
+			"Origin Account",
+			"Amount",
+			"Target Account"
+		);
+		for (Transaction tx : txs) {
+			System.out.println(tx);
 		}
 	}
 

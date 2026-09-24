@@ -78,7 +78,7 @@ public class BankDAOImpl implements BankDAO {
 
 					insertTransaction.setInt(1, account.getId());
 					insertTransaction.setString(2, type);
-					insertTransaction.setBigDecimal(3, amount);
+					insertTransaction.setBigDecimal(3, type.equals("WITHDRAW") ? amount.negate() : amount);
 					insertTransaction.setNull(4, Types.INTEGER);
 					insertTransaction.setTimestamp(5, Timestamp.from(Instant.now()));
 					if (insertTransaction.executeUpdate() != 1) {
@@ -120,7 +120,7 @@ public class BankDAOImpl implements BankDAO {
 
 					insertTransactionFromAcc.setInt(1, account.getId());
 					insertTransactionFromAcc.setString(2, type);
-					insertTransactionFromAcc.setBigDecimal(3, amount);
+					insertTransactionFromAcc.setBigDecimal(3, amount.negate());
 					insertTransactionFromAcc.setInt(4, toAccount.getId());
 					insertTransactionFromAcc.setTimestamp(5, Timestamp.from(Instant.now()));
 					if (insertTransactionFromAcc.executeUpdate() != 1) {
@@ -240,14 +240,23 @@ public class BankDAOImpl implements BankDAO {
 
 	private Transaction mapTransactions(ResultSet resultSet) throws SQLException {
 		int relatedAccountId = resultSet.getInt("related_account_id");
-		Integer toAccount = resultSet.wasNull() ? null : relatedAccountId;
+		Integer relatedAccount = resultSet.wasNull() ? null : relatedAccountId;
+		int ownerAccount = resultSet.getInt("account_id");
+		BigDecimal amount = resultSet.getBigDecimal("amount");
+		String type = resultSet.getString("type");
+
+		// Money-out rows are stored negative, so a positive TRANSFER row is one this account received.
+		boolean receivedTransfer = type.equals("TRANSFER") && relatedAccount != null && amount.signum() > 0;
+		int fromAccount = receivedTransfer ? relatedAccount : ownerAccount;
+		Integer toAccount = receivedTransfer ? Integer.valueOf(ownerAccount) : relatedAccount;
+
 		return new Transaction(
 			resultSet.getInt("transaction_id"),
-			resultSet.getBigDecimal("amount"),
+			amount,
 			resultSet.getTimestamp("timestamp"),
-			resultSet.getInt("account_id"),
+			fromAccount,
 			toAccount,
-			resultSet.getString("type")
+			type
 		);
 	}
 }

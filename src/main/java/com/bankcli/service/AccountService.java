@@ -1,15 +1,17 @@
 package com.bankcli.service;
 
 import com.bankcli.domain.Account;
+import com.bankcli.domain.Transaction;
 import java.math.BigDecimal;
+import java.util.List;
 
 public interface AccountService {
-	void getAccount(Account account);
-	void getAccountStatus();
-	void makeDeposit(BigDecimal amount);
-	void makeWithdrawal(BigDecimal amount);
-	void createAccount(String pin);
-	void makeTransfer(int toAccountId, BigDecimal amount);
+	Account getAccount(Account account);
+	Account getAccountStatus();
+	Account makeDeposit(BigDecimal amount);
+	Account makeWithdrawal(BigDecimal amount);
+	Account createAccount(String pin);
+	Account makeTransfer(int toAccountId, BigDecimal amount);
 	void logOut();
-	void getTransactions();
+	List<Transaction> getTransactions();
 }
