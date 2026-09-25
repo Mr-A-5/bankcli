@@ -11,6 +11,7 @@ public class BankRepl {
 
 	private final AccountService service;
 	private final Scanner scanner = new Scanner(System.in);
+	private boolean isLoggedIn = false;
 
 	public BankRepl(AccountService service) {
 		this.service = service;
@@ -25,9 +26,12 @@ public class BankRepl {
 			if (command.equals("exit")) {
 				return;
 			}
-
 			try {
-				handle(command);
+				if (isLoggedIn) {
+					handleLoggedIn(command);
+				} else {
+					handleLoggedOut(command);
+				}
 			} catch (IllegalArgumentException e) {
 				System.out.println("Error: " + e.getMessage());
 			} catch (IllegalStateException e) {
@@ -36,30 +40,46 @@ public class BankRepl {
 		}
 	}
 
-	private void handle(String command) {
+	private void handleLoggedOut(String command) {
 		switch (command) {
-			case "1" -> printAccount(service.getAccount(readAccount()));
+			case "1" -> {
+				printAccount(service.getAccount(readAccount()));
+				isLoggedIn = true;
+			}
 			case "2" -> {
 				Account created = service.createAccount(readString("Please enter a PIN to create your account: \n> "));
 				System.out.println("Welcome to bank CLI:");
 				printAccount(created);
+				isLoggedIn = true;
 			}
-			case "3" -> printAccount(
+			case "3" -> service.logOut();
+			case "help" -> printHelpLoggedOut();
+			default -> System.out.println("Unknown command. Type help to see the list of commands.");
+		}
+	}
+
+	private void handleLoggedIn(String command) {
+		switch (command) {
+			case "1" -> printAccount(
 				service.makeDeposit(readAmount("Please enter the amount you want to deposit: \n> $"))
 			);
-			case "4" -> printAccount(
+			case "2" -> printAccount(
 				service.makeWithdrawal(readAmount("Please enter the amount you want to withdraw: \n> $"))
 			);
-			case "5" -> printAccount(
+			case "3" -> printAccount(
 				service.makeTransfer(
 					readInt("Please enter the Account ID of the account you wish to transfer to: \n> "),
 					readAmount("Please enter the amount you want to transfer: \n> $")
 				)
 			);
-			case "6" -> printAccount(service.getAccountStatus());
-			case "7" -> printTransactions(service.getTransactions());
-			case "8" -> service.logOut();
-			case "help" -> printHelp();
+			case "4" -> printAccount(service.getAccountStatus());
+			case "5" -> printTransactions(service.getTransactions());
+			case "6" -> {
+				service.logOut();
+				isLoggedIn = false;
+				System.out.println("Thank you for using our services, you have logged out from your Account.");
+			}
+			case "help" -> printHelpLoggedIn();
 			default -> System.out.println("Unknown command. Type help to see the list of commands.");
 		}
 	}
@@ -110,16 +130,22 @@ public class BankRepl {
 		}
 	}
 
-	private void printHelp() {
+	private void printHelpLoggedOut() {
 		System.out.println("\nAvailable commands:");
 		System.out.println("1 - Log in to an account using your Account ID and PIN");
 		System.out.println("2 - Create a new account");
-		System.out.println("3 - Deposit money into your account");
-		System.out.println("4 - Withdraw money from your account");
-		System.out.println("5 - Transfer money to another account");
-		System.out.println("6 - View your account status");
-		System.out.println("7 - View your transaction history");
-		System.out.println("8 - Log out of your account");
+		System.out.println("help - Show this help message");
+		System.out.println("exit - Exit the application\n");
+	}
+
+	private void printHelpLoggedIn() {
+		System.out.println("\nAvailable commands:");
+		System.out.println("1 - Deposit money into your account");
+		System.out.println("2 - Withdraw money from your account");
+		System.out.println("3 - Transfer money to another account");
+		System.out.println("4 - View your account status");
+		System.out.println("5 - View your transaction history");
+		System.out.println("6 - Log out of your account");
 		System.out.println("help - Show this help message");
 		System.out.println("exit - Exit the application\n");
 	}
