@@ -132,7 +132,7 @@ public class AccountServiceImpl implements AccountService {
 				logger.error(
 					"Account Id: {} entered an amount with more than 2 decimal places. Amount: {}",
 					account.getId(),
-					amount.setScale(10, RoundingMode.UNNECESSARY) + "..."
+					amount.setScale(10, RoundingMode.DOWN) + "..."
 				);
 			} else {
 				logger.error(
