@@ -12,8 +12,12 @@ import java.sql.Types;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BankDAOImpl implements BankDAO {
+
+	private static final Logger logger = LoggerFactory.getLogger(BankDAOImpl.class);
 
 	private static final String CREATE_TABLE_SQL = """
 	CREATE TABLE IF NOT EXISTS account (
@@ -179,6 +183,7 @@ public class BankDAOImpl implements BankDAO {
 	}
 
 	private IllegalStateException databaseError(String message, SQLException cause) {
+		logger.error("{}: {}", message, cause.getMessage(), cause);
 		return new IllegalStateException(message, cause);
 	}
 
